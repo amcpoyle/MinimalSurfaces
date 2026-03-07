@@ -54,36 +54,14 @@ def compute_hij(nu_value, df_du2, df_dv2, df_dudv, i, j):
 def plot_surface(U, V, f_mesh):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(U, V, f_mesh[:,:,2], cmap='viridis')
+    ax.plot_surface(f_mesh[:,:,0], f_mesh[:,:,1], f_mesh[:,:,2], cmap='viridis')
     return fig
     # plt.show()
 
-
-def main():
-    N = 25
-    u_range = np.linspace(1e-6, 2*np.pi, N)
-    v_range = np.linspace(1e-6, 2*np.pi, N)
-
-    du = u_range[1] - u_range[0]
-    dv = v_range[1] - v_range[0]
-    U, V = np.meshgrid(u_range, v_range, indexing='ij')
-    f_mesh = np.zeros((N,N,3))
-    H_mesh = np.zeros((N,N))
-    nu_mesh = np.zeros((N,N,3))
-
-    for i in range(N):
-        for j in range(N):
-            x_val = u_range[i]
-            y_val = v_range[j]
-            z_val = np.sin(np.sqrt(u_range[i]**2 + v_range[j]**2))
-            f_mesh[i][j] = np.array([x_val, y_val, z_val]).astype(float).flatten()
-
-
-    # plot my original surface
-    original_fig = plot_surface(U, V, f_mesh)
-
-    tol_eps = 1e-6
-    eps = (min(du, dv)**2)/4
+"""
+this is the main function that runs the numerical minimization
+"""
+def run_minimizer(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps):
 
     not_minimal = True
     counter = 0
@@ -166,14 +144,5 @@ def main():
         counter += 1
         print(H_val_total)
 
+    return f_mesh, H_mesh, nu_mesh
 
-    # plot my new surface
-    new_fig = plot_surface(U, V, f_mesh)
-    original_fig.show()
-    new_fig.show()
-    plt.show()
-
-
-
-if __name__ == '__main__':
-    main()
