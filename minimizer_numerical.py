@@ -55,11 +55,12 @@ def plot_surface(U, V, f_mesh):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_surface(U, V, f_mesh[:,:,2], cmap='viridis')
-    plt.show()
+    return fig
+    # plt.show()
 
 
 def main():
-    N = 10
+    N = 25
     u_range = np.linspace(1e-6, 2*np.pi, N)
     v_range = np.linspace(1e-6, 2*np.pi, N)
 
@@ -79,7 +80,7 @@ def main():
 
 
     # plot my original surface
-    plot_surface(U, V, f_mesh)
+    original_fig = plot_surface(U, V, f_mesh)
 
     tol_eps = 1e-6
     eps = (min(du, dv)**2)/4
@@ -167,7 +168,10 @@ def main():
 
 
     # plot my new surface
-    plot_surface(U, V, f_mesh)
+    new_fig = plot_surface(U, V, f_mesh)
+    original_fig.show()
+    new_fig.show()
+    plt.show()
 
 
 
