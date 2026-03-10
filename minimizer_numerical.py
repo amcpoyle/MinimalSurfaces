@@ -160,7 +160,7 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
         print("At iter = ", counter)
 
         # add our mesh to plotly_frames
-        if counter & 25 == 0:
+        if counter % 25 == 0:
             frame = go.Frame(
                     data = go.Surface(
                         x=f_mesh[:,:,0],

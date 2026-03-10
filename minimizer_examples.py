@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from minimizer_numerical import plot_surface, run_minimizer, run_minimizer_animation
 import plotly.graph_objects as go
+from PIL import Image
+import io
 
 # sort of an arbitrary surface example:
-def surface1():
+def surface1(dur):
     N = 25
     u_range = np.linspace(0, 2*np.pi, N)
     v_range = np.linspace(0, 2*np.pi, N)
@@ -54,7 +56,7 @@ def surface1():
                         dict(
                             label='Play',
                             method='animate',
-                            args=[None, dict(frame=dict(duration=16, redraw=True), fromcurrent=True)]
+                            args=[None, dict(frame=dict(duration=dur, redraw=True), fromcurrent=True)]
                             )
                         ]
                     )
@@ -67,7 +69,7 @@ def surface1():
                     steps=[
                         dict(
                             method='animate',
-                            args=[[frame.name], dict(mode='immediate', frame=dict(duration=16, redraw=True))],
+                            args=[[frame.name], dict(mode='immediate', frame=dict(duration=dur, redraw=True))],
                             label=str(i*10)
                             )
                         for i, frame in enumerate(plotly_frames)
@@ -126,7 +128,8 @@ def right_helicoid():
 
    
 def main():
-    surface1()
+    surface1(100)
+
 
 if __name__ == '__main__':
     main()
