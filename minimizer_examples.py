@@ -31,7 +31,7 @@ def surface1(dur):
     eps = (min(du, dv)**2)/4
     f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames = run_minimizer_animation(N, u_range, v_range, du, dv,
                                                         U, V, f_mesh, H_mesh, nu_mesh,
-                                                        tol_eps, eps)
+                                                        tol_eps, eps, 25)
 
     fig = go.Figure(
             data = go.Surface(

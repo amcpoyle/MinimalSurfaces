@@ -121,6 +121,8 @@ def run_minimizer(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, to
                 H_mesh[i][j] = H_val
                 H_val_total += H_val**2
 
+                # if H_val is nan, break out
+
 
                 if abs(H_val) > tol_eps:
                     # update my H_mesh because we need to do another iter
@@ -147,10 +149,10 @@ def run_minimizer(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, to
 
         counter += 1
         print(H_val_total)
-
+        
     return f_mesh, H_mesh, nu_mesh
 
-def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps):
+def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps, frame_freq):
 
     not_minimal = True
     counter = 0
@@ -160,7 +162,7 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
         print("At iter = ", counter)
 
         # add our mesh to plotly_frames
-        if counter % 25 == 0:
+        if counter % frame_freq == 0:
             frame = go.Frame(
                     data = go.Surface(
                         x=f_mesh[:,:,0],
@@ -185,6 +187,7 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
         H_val_total = 0
         # NOTE: fixed at the boundary by requirements of minimal surfaces
         # TODO: is this true
+        # TODO: neck pinch singularity don't fix?
         for i in range(1, N-1):
             for j in range(1, N-1):
                 surface_value = f_mesh[i][j]
@@ -220,6 +223,9 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
                 H_mesh[i][j] = H_val
                 H_val_total += H_val**2
 
+                if np.isnan(H_val):
+                    not_minimal = False # break out
+
 
                 if abs(H_val) > tol_eps:
                     # update my H_mesh because we need to do another iter
@@ -245,6 +251,10 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
 
 
         counter += 1
-        print(H_val_total)
+        print('TOTAL = ', H_val_total)
+
+        if (np.isnan(H_val_total) | np.isinf(H_val_total)):
+            not_minimal = False # break out
+
 
     return f_mesh, H_mesh, nu_mesh, plotly_frames
