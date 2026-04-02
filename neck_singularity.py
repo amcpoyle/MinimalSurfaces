@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from minimizer_numerical import plot_surface, run_minimizer, run_minimizer_animation
+from minimizer_numerical import plot_surface, run_minimizer, run_minimizer_animation, run_minimizer_blender
 import plotly.graph_objects as go
 from PIL import Image
 import io
@@ -18,7 +18,7 @@ def r(z):
 
 def quartic_eqn(dur):
     N = 25
-    theta_range = np.linspace(0, 2*np.pi, N)
+    theta_range = np.linspace(0, 2*np.pi, N, endpoint=False)
     z_range = np.linspace(-1,1, N)
 
     dtheta = theta_range[1] - theta_range[0]
@@ -46,13 +46,19 @@ def quartic_eqn(dur):
     eps = (min(dtheta, dz)**2)/4
     f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
                                                         T, Z, f_mesh, H_mesh, nu_mesh,
-                                                        tol_eps, eps, 10)
+                                                        tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True) # fix z boundary but not theta boundary
+
+    # blender_frames = np.array(blender_frames)
+    # np.save("neck_pinch_frames3.npy", blender_frames)
+
+    # fig_plot = 
+    f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
 
     fig = go.Figure(
             data = go.Surface(
-                x=f_mesh[:,:,0],
-                y=f_mesh[:,:,1],
-                z=f_mesh[:,:,2],
+                x=f_plot[:,:,0],
+                y=f_plot[:,:,1],
+                z=f_plot[:,:,2],
                 colorscale='Viridis',
                 cmin=-1,cmax=1
             ),
