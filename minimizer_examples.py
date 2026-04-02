@@ -134,8 +134,8 @@ def right_helicoid():
 
 def sphere(dur):
     N = 25
-    z_range = np.linspace(-1, 1, N) # z
-    theta_range = np.linspace(0, 2*np.pi, N) # theta
+    z_range = np.linspace(-1 + 1e-6, 1 - 1e-6, N) # z
+    theta_range = np.linspace(0, 2*np.pi, N, endpoint=False) # theta
 
     dz = z_range[1] - z_range[0]
     dtheta = theta_range[1] - theta_range[0]
@@ -162,12 +162,12 @@ def sphere(dur):
     # original_fig.show()
     # plt.show()
 
-    tol_eps = 1e-6
-    eps = (min(dtheta, dz)**2)/4
+    tol_eps = 1e-10
+    eps = ((min(dtheta, dz)**2)/4)
 
     f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
                                                         T, Z, f_mesh, H_mesh, nu_mesh,
-                                                        tol_eps, eps, 15, fix_u_boundary=False, fix_v_boundary=False, periodic=True)
+                                                        tol_eps, eps, 1, fix_u_boundary=False, fix_v_boundary=False, periodic=True)
     
 
     fig = go.Figure(
@@ -226,7 +226,7 @@ def sphere(dur):
 
    
 def main():
-    surface1(100)
+    sphere(100)
 
 
 if __name__ == '__main__':

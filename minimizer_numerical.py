@@ -160,6 +160,7 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
     plotly_frames = []
 
     while not_minimal:
+
         print("At iter = ", counter)
 
         # add our mesh to plotly_frames
@@ -231,11 +232,11 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
                 prod = h11*g22 - 2*h12*g12 + h22*g11
                 H_val = (1/(2*det_gij))*prod
                 H_mesh[i][j] = H_val
-                H_val_total += H_val**2
 
                 if np.isnan(H_val):
-                    not_minimal = False # break out
+                    continue # we are at a bad point (not singularity though)
 
+                H_val_total += H_val**2
 
                 if abs(H_val) > tol_eps:
                     # update my H_mesh because we need to do another iter
@@ -247,6 +248,10 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
                     not_minimal = True
 
         # we are done with sweeping through this mesh
+        # if eps_reduction:
+        #     r = np.mean(np.linalg.norm(f_mesh, axis=2))
+        #     if r < 0.9:
+        #         not_minimal = False
 
         # if we are still not minimal, then we need to update the mesh
         if not_minimal:
@@ -254,6 +259,11 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
                 for j in range(N):
                     H_ij = H_mesh[i][j]
                     if abs(H_ij) > tol_eps:
+                        # trying to reduce spikes in sphere mesh since curvature grows quickly
+                        # if eps_reduction:
+                        #     H_scale = np.mean(np.abs(H_mesh[H_mesh != 0]))
+                        #     eps = eps/(1 + H_scale)
+
                         new_val = f_mesh[i][j] + eps*H_mesh[i][j]*nu_mesh[i][j]
                         f_mesh[i][j] = new_val
                     else:
@@ -273,7 +283,7 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
     return f_mesh, H_mesh, nu_mesh, plotly_frames
 
 
-def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps, frame_freq):
+def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps, frame_freq, fix_u_boundary=True, fix_v_boundary=True, periodic=False):
 
     not_minimal = True
     counter = 0
@@ -286,12 +296,17 @@ def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_
         if counter % frame_freq == 0:
             blender_frames.append(f_mesh.copy())
 
-        # compute df_du and df_dv for our current f_mesh
-        df_du = np.gradient(f_mesh, du, axis=0)
         df_dv = np.gradient(f_mesh, dv, axis=1)
-        df_du2 = np.gradient(df_du, du, axis=0)
         df_dv2 = np.gradient(df_dv, dv, axis=1)
-        df_dudv = np.gradient(df_du, dv, axis=1)
+
+        if periodic:
+            df_du = (np.roll(f_mesh, -1, axis=0) - np.roll(f_mesh, 1, axis=0)) / (2*du)
+            df_du2 = (np.roll(f_mesh, -1, axis=0) - 2*f_mesh + np.roll(f_mesh, 1, axis=0)) / (du**2)
+            df_dudv = (np.roll(df_dv, -1, axis=0) - np.roll(df_dv, 1, axis=0)) / (2*du)
+        else:
+            df_du = np.gradient(f_mesh, du, axis=0)
+            df_du2 = np.gradient(df_du, du, axis=0)
+            df_dudv = np.gradient(df_du, dv, axis=1)
 
         # run our normal variation iteration
         # compute H at each point on our current surface
@@ -300,8 +315,10 @@ def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_
         # NOTE: fixed at the boundary by requirements of minimal surfaces
         # TODO: is this true
         # TODO: neck pinch singularity don't fix?
-        for i in range(1, N-1):
-            for j in range(1, N-1):
+        i_range = range(N) if (periodic or not fix_u_boundary) else range(1, N-1)
+        j_range = range(1, N-1) if fix_v_boundary else range(N)
+        for i in i_range:
+            for j in j_range:
                 surface_value = f_mesh[i][j]
                 surface_x = surface_value[0]
                 surface_y = surface_value[1]
@@ -333,11 +350,11 @@ def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_
                 prod = h11*g22 - 2*h12*g12 + h22*g11
                 H_val = (1/(2*det_gij))*prod
                 H_mesh[i][j] = H_val
-                H_val_total += H_val**2
 
                 if np.isnan(H_val):
-                    not_minimal = False # break out
+                    continue # we are at a bad point (not singularity though)
 
+                H_val_total += H_val**2
 
                 if abs(H_val) > tol_eps:
                     # update my H_mesh because we need to do another iter
