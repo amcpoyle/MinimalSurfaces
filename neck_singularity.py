@@ -44,64 +44,64 @@ def quartic_eqn(dur):
     plt.show()
     tol_eps = 1e-6
     eps = (min(dtheta, dz)**2)/4
-    f_mesh_min, H_mesh_min, nu_mesh_min, blender_frames = run_minimizer_blender(N, theta_range, z_range, dtheta, dz,
+    f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
                                                         T, Z, f_mesh, H_mesh, nu_mesh,
                                                         tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True) # fix z boundary but not theta boundary
 
-    blender_frames = np.array(blender_frames)
-    np.save("neck_pinch_frames_ver2_1.npy", blender_frames)
+    # blender_frames = np.array(blender_frames)
+    # np.save("neck_pinch_frames_ver2_1.npy", blender_frames)
 
-    # f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
+    f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
 
-    # fig = go.Figure(
-    #         data = go.Surface(
-    #             x=f_plot[:,:,0],
-    #             y=f_plot[:,:,1],
-    #             z=f_plot[:,:,2],
-    #             colorscale='Viridis',
-    #             cmin=-1,cmax=1
-    #         ),
-    #         frames = plotly_frames
-    #     )
+    fig = go.Figure(
+            data = go.Surface(
+                x=f_plot[:,:,0],
+                y=f_plot[:,:,1],
+                z=f_plot[:,:,2],
+                colorscale='Viridis',
+                cmin=-1,cmax=1
+            ),
+            frames = plotly_frames
+        )
 
-    # fig.update_layout(
-    #         updatemenus=[
-    #             dict(
-    #                 type='buttons',
-    #                 showactive=False,
-    #                 y=0,
-    #                 x=0.5,
-    #                 xanchor='center',
-    #                 buttons=[
-    #                     dict(
-    #                         label='Play',
-    #                         method='animate',
-    #                         args=[None, dict(frame=dict(duration=dur, redraw=True), fromcurrent=True)]
-    #                         )
-    #                     ]
-    #                 )
-    #             ]
-    #         )
-    # 
-    # fig.update_layout(
-    #         sliders=[
-    #             dict(
-    #                 steps=[
-    #                     dict(
-    #                         method='animate',
-    #                         args=[[frame.name], dict(mode='immediate', frame=dict(duration=dur, redraw=True))],
-    #                         label=str(i*10)
-    #                         )
-    #                     for i, frame in enumerate(plotly_frames)
-    #                     ],
-    #                 currentvalue=dict(prefix='Iteration: '),
-    #                 x=0.1,
-    #                 len=0.9
-    #                 )
-    #             ]
-    #         )
+    fig.update_layout(
+            updatemenus=[
+                dict(
+                    type='buttons',
+                    showactive=False,
+                    y=0,
+                    x=0.5,
+                    xanchor='center',
+                    buttons=[
+                        dict(
+                            label='Play',
+                            method='animate',
+                            args=[None, dict(frame=dict(duration=dur, redraw=True), fromcurrent=True)]
+                            )
+                        ]
+                    )
+                ]
+            )
+    
+    fig.update_layout(
+            sliders=[
+                dict(
+                    steps=[
+                        dict(
+                            method='animate',
+                            args=[[frame.name], dict(mode='immediate', frame=dict(duration=dur, redraw=True))],
+                            label=str(i*10)
+                            )
+                        for i, frame in enumerate(plotly_frames)
+                        ],
+                    currentvalue=dict(prefix='Iteration: '),
+                    x=0.1,
+                    len=0.9
+                    )
+                ]
+            )
 
-    # fig.show()
+    fig.show()
 
 def main():
     quartic_eqn(100)

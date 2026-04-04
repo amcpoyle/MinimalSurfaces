@@ -153,13 +153,15 @@ def run_minimizer(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, to
         
     return f_mesh, H_mesh, nu_mesh
 
-def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps, frame_freq, fix_u_boundary=True, fix_v_boundary=True, periodic=False):
+def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps, frame_freq, fix_u_boundary=True, fix_v_boundary=True, periodic=False, frac=0.01):
 
     not_minimal = True
     counter = 0
     plotly_frames = []
+    det_gij_tracking = None
 
     while not_minimal:
+        det_gij_min = np.inf
 
         print("At iter = ", counter)
 
@@ -229,8 +231,11 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
 
                 # compute H
                 det_gij = np.linalg.det(gij)
+                if det_gij > 0:
+                    det_gij_min = min(det_gij_min, det_gij)
+
                 prod = h11*g22 - 2*h12*g12 + h22*g11
-                H_val = (1/(2*det_gij))*prod
+                H_val = (1/(2*det_gij))*prod # H --> infinity when det_gij --> 0
                 H_mesh[i][j] = H_val
 
                 if np.isnan(H_val):
@@ -252,6 +257,13 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
         #     r = np.mean(np.linalg.norm(f_mesh, axis=2))
         #     if r < 0.9:
         #         not_minimal = False
+        if det_gij_tracking is None and np.isfinite(det_gij_min):
+            det_gij_tracking = det_gij_min
+
+        if det_gij_tracking is not None and det_gij_min < frac * det_gij_tracking:
+            print(f"Singularity at iter {counter}: min det(g) = {det_gij_min:.3e}")
+            print(f"({100*det_gij_min/det_gij_tracking:.2f}% of initial). Stopping.")
+            not_minimal = False
 
         # if we are still not minimal, then we need to update the mesh
         if not_minimal:
