@@ -139,7 +139,7 @@ def run_minimizer(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, to
         # if we are still not minimal, then we need to update the mesh
         if not_minimal:
             for i in range(N):
-                for j in range(N):
+                for j in range(f_mesh.shape[1]):
                     H_ij = H_mesh[i][j]
                     if abs(H_ij) > tol_eps:
                         new_val = f_mesh[i][j] + eps*H_mesh[i][j]*nu_mesh[i][j]
@@ -159,9 +159,11 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
     counter = 0
     plotly_frames = []
     det_gij_tracking = None
+    had_singularity = False
 
     while not_minimal:
         det_gij_min = np.inf
+        det_gij_min_idx = None
 
         print("At iter = ", counter)
 
@@ -199,8 +201,9 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
         # NOTE: fixed at the boundary by requirements of minimal surfaces
         # TODO: is this true
         # TODO: neck pinch singularity don't fix?
+        Nv = f_mesh.shape[1]
         i_range = range(N) if (periodic or not fix_u_boundary) else range(1, N-1)
-        j_range = range(1, N-1) if fix_v_boundary else range(N)
+        j_range = range(1, Nv-1) if fix_v_boundary else range(Nv)
         for i in i_range:
             for j in j_range:
                 surface_value = f_mesh[i][j]
@@ -232,7 +235,13 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
                 # compute H
                 det_gij = np.linalg.det(gij)
                 if det_gij > 0:
-                    det_gij_min = min(det_gij_min, det_gij)
+                    # det_gij_min = min(det_gij_min, det_gij) # maybe update with new min if we have it
+                    if det_gij < det_gij_min:
+                        # we have a new min
+                        det_gij_min = det_gij
+                        det_gij_min_idx = [i,j]
+
+                    
 
                 prod = h11*g22 - 2*h12*g12 + h22*g11
                 H_val = (1/(2*det_gij))*prod # H --> infinity when det_gij --> 0
@@ -263,12 +272,15 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
         if det_gij_tracking is not None and det_gij_min < frac * det_gij_tracking:
             print(f"Singularity at iter {counter}: min det(g) = {det_gij_min:.3e}")
             print(f"({100*det_gij_min/det_gij_tracking:.2f}% of initial). Stopping.")
+            # singularity_pts = det_gij
+            had_singularity = True
             not_minimal = False
+
 
         # if we are still not minimal, then we need to update the mesh
         if not_minimal:
             for i in range(N):
-                for j in range(N):
+                for j in range(f_mesh.shape[1]):
                     H_ij = H_mesh[i][j]
                     if abs(H_ij) > tol_eps:
                         # trying to reduce spikes in sphere mesh since curvature grows quickly
@@ -292,7 +304,7 @@ def run_minimizer_animation(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, n
             not_minimal = False # break out
 
 
-    return f_mesh, H_mesh, nu_mesh, plotly_frames
+    return f_mesh, H_mesh, nu_mesh, plotly_frames, had_singularity, det_gij_min_idx
 
 
 def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol_eps, eps, frame_freq, fix_u_boundary=True, fix_v_boundary=True, periodic=False):
@@ -327,8 +339,9 @@ def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_
         # NOTE: fixed at the boundary by requirements of minimal surfaces
         # TODO: is this true
         # TODO: neck pinch singularity don't fix?
+        Nv = f_mesh.shape[1]
         i_range = range(N) if (periodic or not fix_u_boundary) else range(1, N-1)
-        j_range = range(1, N-1) if fix_v_boundary else range(N)
+        j_range = range(1, Nv-1) if fix_v_boundary else range(Nv)
         for i in i_range:
             for j in j_range:
                 surface_value = f_mesh[i][j]
@@ -382,7 +395,7 @@ def run_minimizer_blender(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_
         # if we are still not minimal, then we need to update the mesh
         if not_minimal:
             for i in range(N):
-                for j in range(N):
+                for j in range(f_mesh.shape[1]):
                     H_ij = H_mesh[i][j]
                     if abs(H_ij) > tol_eps:
                         new_val = f_mesh[i][j] + eps*H_mesh[i][j]*nu_mesh[i][j]
@@ -443,8 +456,9 @@ def run_implicit(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol
         not_minimal_iter = False
         H_val_total = 0
 
+        Nv = f_mesh.shape[1]
         i_range = range(N) if (periodic or not fix_u_boundary) else range(1, N-1)
-        j_range = range(1, N-1) if fix_v_boundary else range(N)
+        j_range = range(1, Nv-1) if fix_v_boundary else range(Nv)
         for i in i_range:
             for j in j_range:
                 surface_value = f_mesh[i][j]
@@ -502,7 +516,7 @@ def run_implicit(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol
         # if we are still not minimal, then we need to update the mesh
         if not_minimal:
             for i in range(N):
-                for j in range(N):
+                for j in range(f_mesh.shape[1]):
                     H_ij = H_mesh[i][j]
                     if abs(H_ij) > tol_eps:
                         # trying to reduce spikes in sphere mesh since curvature grows quickly
@@ -527,3 +541,55 @@ def run_implicit(N, u_range, v_range, du, dv, U, V, f_mesh, H_mesh, nu_mesh, tol
 
 
     return f_mesh, H_mesh, nu_mesh, plotly_frames
+
+
+def generate_animation(f_plot, plotly_frames, dur):
+    fig = go.Figure(
+            data = go.Surface(
+                x=f_plot[:,:,0],
+                y=f_plot[:,:,1],
+                z=f_plot[:,:,2],
+                colorscale='Viridis',
+                cmin=-1,cmax=1
+            ),
+            frames = plotly_frames
+        )
+
+    fig.update_layout(
+            updatemenus=[
+                dict(
+                    type='buttons',
+                    showactive=False,
+                    y=0,
+                    x=0.5,
+                    xanchor='center',
+                    buttons=[
+                        dict(
+                            label='Play',
+                            method='animate',
+                            args=[None, dict(frame=dict(duration=dur, redraw=True), fromcurrent=True)]
+                            )
+                        ]
+                    )
+                ]
+            )
+    
+    fig.update_layout(
+            sliders=[
+                dict(
+                    steps=[
+                        dict(
+                            method='animate',
+                            args=[[frame.name], dict(mode='immediate', frame=dict(duration=dur, redraw=True))],
+                            label=str(i*10)
+                            )
+                        for i, frame in enumerate(plotly_frames)
+                        ],
+                    currentvalue=dict(prefix='Iteration: '),
+                    x=0.1,
+                    len=0.9
+                    )
+                ]
+            )
+
+    fig.show()

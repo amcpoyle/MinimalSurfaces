@@ -4,6 +4,7 @@ from minimizer_numerical import plot_surface, run_minimizer, run_minimizer_anima
 import plotly.graph_objects as go
 from PIL import Image
 import io
+from minimizer_numerical import generate_animation
 
 r0 = 0.5 # 1 = cylinder, 0 = already singularity
 
@@ -39,69 +40,86 @@ def quartic_eqn(dur):
             f_mesh[i][j] = np.array([u_val, v_val, w_val]).astype(float).flatten()
 
 
-    original_fig = plot_surface(T, Z, f_mesh)
-    original_fig.show()
+    # original_fig = plot_surface(T, Z, f_mesh)
+    # original_fig.show()
     plt.show()
     tol_eps = 1e-6
     eps = (min(dtheta, dz)**2)/4
-    f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
+    f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames, singularity, singularity_pt = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
                                                         T, Z, f_mesh, H_mesh, nu_mesh,
                                                         tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True) # fix z boundary but not theta boundary
+
+    if singularity:
+        # now we have to do some surgery on our minimized surface and continue with minimization?
+        print()
+        print("SINGULARITY AT: ", f_mesh[singularity_pt[0]][singularity_pt[1]])
+        print()
+
+        # singularity_pt[1] is the z-index; slice along axis 1 for a horizontal cut
+        j_sing = singularity_pt[1]
+        z_sing = f_mesh[0, j_sing, 2]
+        center = np.array([0.0, 0.0, z_sing])  # center of the cap disk
+
+        half1 = f_mesh[:, :j_sing, :]   # bottom half (open at top)
+        half2 = f_mesh[:, j_sing+1:, :] # top half (open at bottom)
+
+        # build disk caps: interpolate from boundary ring inward to center point
+        cap_steps = 10
+        N = f_mesh.shape[0]
+
+        # cap for bottom half: boundary ring is the last row of half1
+        ring1 = half1[:, -1, :]  # shape (N, 3)
+        cap1 = np.stack(
+            [(1 - t) * ring1 + t * center for t in np.linspace(0, 1, cap_steps)],
+            axis=1
+        )  # shape (N, cap_steps, 3)
+        # close the theta seam by appending the first row at the end
+        new_mesh1 = np.concatenate([half1, cap1], axis=1)
+        new_mesh1 = np.concatenate([new_mesh1, new_mesh1[0:1, :, :]], axis=0)
+
+        # cap for top half: boundary ring is the first row of half2
+        ring2 = half2[:, 0, :]  # shape (N, 3)
+        cap2 = np.stack(
+            [(1 - t) * center + t * ring2 for t in np.linspace(0, 1, cap_steps)],
+            axis=1
+        )  # shape (N, cap_steps, 3)
+        new_mesh2 = np.concatenate([cap2, half2], axis=1)
+        new_mesh2 = np.concatenate([new_mesh2, new_mesh2[0:1, :, :]], axis=0)
+
+        # new_mesh1_fig = plot_surface(T, Z, new_mesh1)
+        # new_mesh1_fig.show()
+        # new_mesh2_fig = plot_surface(T, Z, new_mesh2)
+        # new_mesh2_fig.show()
+        # plt.show()
+
+        # grid params for each half (no cap, no theta-closing row — minimizer handles those)
+        z_range1 = z_range[:j_sing]
+        z_range2 = z_range[j_sing+1:]
+        T1, Z1 = T[:, :j_sing], Z[:, :j_sing]
+        T2, Z2 = T[:, j_sing+1:], Z[:, j_sing+1:]
+        H_mesh1 = np.zeros((N, len(z_range1)))
+        nu_mesh1 = np.zeros((N, len(z_range1), 3))
+        H_mesh2 = np.zeros((N, len(z_range2)))
+        nu_mesh2 = np.zeros((N, len(z_range2), 3))
+
+        new_mesh1_min, new_mesh1_H, new_mesh1_nu, new_mesh1_frames, new_mesh1_singularity, new_mesh1_singularity_pt = run_minimizer_animation(
+            N, theta_range, z_range1, dtheta, dz, T1, Z1, half1, H_mesh1, nu_mesh1,
+            tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True)
+
+        new_mesh2_min, new_mesh2_H, new_mesh2_nu, new_mesh2_frames, new_mesh2_singularity, new_mesh2_singularity_pt = run_minimizer_animation(
+            N, theta_range, z_range2, dtheta, dz, T2, Z2, half2, H_mesh2, nu_mesh2,
+            tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True)
+
+        generate_animation(new_mesh2_min, new_mesh2_frames, 100)
+
+
 
     # blender_frames = np.array(blender_frames)
     # np.save("neck_pinch_frames_ver2_1.npy", blender_frames)
 
-    f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
+    # f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
+    # generate_animation(f_plot)
 
-    fig = go.Figure(
-            data = go.Surface(
-                x=f_plot[:,:,0],
-                y=f_plot[:,:,1],
-                z=f_plot[:,:,2],
-                colorscale='Viridis',
-                cmin=-1,cmax=1
-            ),
-            frames = plotly_frames
-        )
-
-    fig.update_layout(
-            updatemenus=[
-                dict(
-                    type='buttons',
-                    showactive=False,
-                    y=0,
-                    x=0.5,
-                    xanchor='center',
-                    buttons=[
-                        dict(
-                            label='Play',
-                            method='animate',
-                            args=[None, dict(frame=dict(duration=dur, redraw=True), fromcurrent=True)]
-                            )
-                        ]
-                    )
-                ]
-            )
-    
-    fig.update_layout(
-            sliders=[
-                dict(
-                    steps=[
-                        dict(
-                            method='animate',
-                            args=[[frame.name], dict(mode='immediate', frame=dict(duration=dur, redraw=True))],
-                            label=str(i*10)
-                            )
-                        for i, frame in enumerate(plotly_frames)
-                        ],
-                    currentvalue=dict(prefix='Iteration: '),
-                    x=0.1,
-                    len=0.9
-                    )
-                ]
-            )
-
-    fig.show()
 
 def main():
     quartic_eqn(100)
