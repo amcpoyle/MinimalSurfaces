@@ -4,6 +4,8 @@ from minimizer_numerical import plot_surface, run_minimizer, run_minimizer_anima
 import plotly.graph_objects as go
 from PIL import Image
 import io
+import trimesh
+from scipy.interpolate import griddata
 
 # sort of an arbitrary surface example:
 def surface1(dur):
@@ -133,39 +135,66 @@ def right_helicoid():
 
 
 def sphere(dur):
+    # # 1 - original mesh generation
+    # N = 25
+    # z_range = np.linspace(-1, 1, N) # z
+    # print('z range: ', z_range)
+    # theta_range = np.linspace(0, 2*np.pi, N, endpoint=False) # theta
+
+    # dz = z_range[1] - z_range[0]
+    # dtheta = theta_range[1] - theta_range[0]
+    # T, Z = np.meshgrid(theta_range, z_range, indexing='ij')
+
+    # f_mesh = np.zeros((N,N,3))
+    # H_mesh = np.zeros((N,N))
+    # nu_mesh = np.zeros((N,N,3))
+
+    # r = 1
+
+    # for i in range(N):
+    #     for j in range(N):
+    #         theta_val = theta_range[i]
+    #         z_val = z_range[j]
+    #         x_val = np.sqrt(1 - z_val**2)*np.cos(theta_val)
+    #         y_val = np.sqrt(1 - z_val**2)*np.sin(theta_val)
+    #         z_val = z_val
+    #         f_mesh[i][j] = np.array([x_val, y_val, z_val]).astype(float).flatten()
+
+
+
+    # # plot my original surface
+    # original_fig = plot_surface(T, Z, f_mesh)
+    # # original_fig.show()
+    # # plt.show()
+
+
+    # 2 - triangular mesh generation
+    sphere_tm = trimesh.creation.icosphere(subdivisions=3)
+    verts = sphere_tm.vertices
+
+    theta_ico = np.arctan2(verts[:,1], verts[:,0])
+    z_ico = verts[:,2]
+
     N = 25
-    z_range = np.linspace(-1 + 1e-6, 1 - 1e-6, N) # z
-    theta_range = np.linspace(0, 2*np.pi, N, endpoint=False) # theta
+    z_range = np.linspace(-1, 1, N) # z
+    theta_range = np.linspace(-np.pi, np.pi, N, endpoint=False) # theta
 
     dz = z_range[1] - z_range[0]
     dtheta = theta_range[1] - theta_range[0]
     T, Z = np.meshgrid(theta_range, z_range, indexing='ij')
+
     f_mesh = np.zeros((N,N,3))
+    points = np.stack([theta_ico, z_ico], axis=1)
+    for k in range(3):
+        f_mesh[:, :, k] = griddata(points, verts[:,k], (T,Z), method='linear')
+
     H_mesh = np.zeros((N,N))
-    nu_mesh = np.zeros((N,N,3))
-
-    r = 1
-
-    for i in range(N):
-        for j in range(N):
-            theta_val = theta_range[i]
-            z_val = z_range[j]
-            x_val = np.sqrt(1 - z_val**2)*np.cos(theta_val)
-            y_val = np.sqrt(1 - z_val**2)*np.sin(theta_val)
-            z_val = z_val
-            f_mesh[i][j] = np.array([x_val, y_val, z_val]).astype(float).flatten()
-
-
-
-    # plot my original surface
-    original_fig = plot_surface(T, Z, f_mesh)
-    # original_fig.show()
-    # plt.show()
+    nu_mesh = np.zeros((N, N, 3))
 
     tol_eps = 1e-10
     eps = ((min(dtheta, dz)**2)/4)
 
-    f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
+    f_mesh_min, H_mesh_min, nu_mesh_min, plotly_frames, had_singularity, det_gij_min_idx = run_minimizer_animation(N, theta_range, z_range, dtheta, dz,
                                                         T, Z, f_mesh, H_mesh, nu_mesh,
                                                         tol_eps, eps, 1, fix_u_boundary=False, fix_v_boundary=False, periodic=True)
     
@@ -180,6 +209,15 @@ def sphere(dur):
             ),
             frames = plotly_frames
         )
+
+    fig.update_layout(
+            scene=dict(
+                xaxis=dict(range=[-1, 1]),
+                yaxis=dict(range=[-1,1]),
+                zaxis=dict(range=[-1,1]),
+                aspectmode='data'
+            )
+    )
 
     fig.update_layout(
             updatemenus=[

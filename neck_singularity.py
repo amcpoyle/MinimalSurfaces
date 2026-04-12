@@ -63,62 +63,14 @@ def quartic_eqn(dur):
         half1 = f_mesh[:, :j_sing, :]   # bottom half (open at top)
         half2 = f_mesh[:, j_sing+1:, :] # top half (open at bottom)
 
-        # build disk caps: interpolate from boundary ring inward to center point
-        cap_steps = 10
-        N = f_mesh.shape[0]
-
-        # cap for bottom half: boundary ring is the last row of half1
-        ring1 = half1[:, -1, :]  # shape (N, 3)
-        cap1 = np.stack(
-            [(1 - t) * ring1 + t * center for t in np.linspace(0, 1, cap_steps)],
-            axis=1
-        )  # shape (N, cap_steps, 3)
-        # close the theta seam by appending the first row at the end
-        new_mesh1 = np.concatenate([half1, cap1], axis=1)
-        new_mesh1 = np.concatenate([new_mesh1, new_mesh1[0:1, :, :]], axis=0)
-
-        # cap for top half: boundary ring is the first row of half2
-        ring2 = half2[:, 0, :]  # shape (N, 3)
-        cap2 = np.stack(
-            [(1 - t) * center + t * ring2 for t in np.linspace(0, 1, cap_steps)],
-            axis=1
-        )  # shape (N, cap_steps, 3)
-        new_mesh2 = np.concatenate([cap2, half2], axis=1)
-        new_mesh2 = np.concatenate([new_mesh2, new_mesh2[0:1, :, :]], axis=0)
-
-        # new_mesh1_fig = plot_surface(T, Z, new_mesh1)
-        # new_mesh1_fig.show()
-        # new_mesh2_fig = plot_surface(T, Z, new_mesh2)
-        # new_mesh2_fig.show()
-        # plt.show()
-
-        # grid params for each half (no cap, no theta-closing row — minimizer handles those)
-        z_range1 = z_range[:j_sing]
-        z_range2 = z_range[j_sing+1:]
-        T1, Z1 = T[:, :j_sing], Z[:, :j_sing]
-        T2, Z2 = T[:, j_sing+1:], Z[:, j_sing+1:]
-        H_mesh1 = np.zeros((N, len(z_range1)))
-        nu_mesh1 = np.zeros((N, len(z_range1), 3))
-        H_mesh2 = np.zeros((N, len(z_range2)))
-        nu_mesh2 = np.zeros((N, len(z_range2), 3))
-
-        new_mesh1_min, new_mesh1_H, new_mesh1_nu, new_mesh1_frames, new_mesh1_singularity, new_mesh1_singularity_pt = run_minimizer_animation(
-            N, theta_range, z_range1, dtheta, dz, T1, Z1, half1, H_mesh1, nu_mesh1,
-            tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True)
-
-        new_mesh2_min, new_mesh2_H, new_mesh2_nu, new_mesh2_frames, new_mesh2_singularity, new_mesh2_singularity_pt = run_minimizer_animation(
-            N, theta_range, z_range2, dtheta, dz, T2, Z2, half2, H_mesh2, nu_mesh2,
-            tol_eps, eps, 5, fix_u_boundary=False, fix_v_boundary=True, periodic=True)
-
-        generate_animation(new_mesh2_min, new_mesh2_frames, 100)
 
 
 
     # blender_frames = np.array(blender_frames)
     # np.save("neck_pinch_frames_ver2_1.npy", blender_frames)
 
-    # f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
-    # generate_animation(f_plot)
+    f_plot = np.concatenate([f_mesh, f_mesh[0:1]], axis=0)
+    generate_animation(f_plot, plotly_frames, 100)
 
 
 def main():
